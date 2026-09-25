@@ -1790,8 +1790,6 @@ const CURATED: Record<string, SourceMetadata> = {
     supportsAudio: true,
     supportsTools: true,
   },
-  // Upstream supports tool calls, but the only lane is k2think.ai's guest route,
-  // which rejects any tools field.
   "k2-horizon": {
     releaseDate: iso("2026-09-03"),
     contextWindow: 524_288,
