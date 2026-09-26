@@ -1810,8 +1810,6 @@ const CURATED: Record<string, SourceMetadata> = {
     supportsAudio: true,
     supportsTools: true,
   },
-  // Upstream supports tool calls, but the only lane is k2think.ai's guest route,
-  // which rejects any tools field.
   // Atria ASI preview model; self-reports Shanghai AI Lab. Specs from api.atria-asi.ai/docs;
   // the date is its public launch post (r/opencodeCLI), not a published release date.
   "atria-dawn-preview": {
@@ -1822,6 +1820,8 @@ const CURATED: Record<string, SourceMetadata> = {
     description:
       "Atria Dawn Preview, a reasoning model for research, engineering and long running agent tasks, served by Atria ASI in preview.",
   },
+  // Upstream supports tool calls, but the only lane is k2think.ai's guest route,
+  // which rejects any tools field.
   "k2-horizon": {
     releaseDate: iso("2026-09-03"),
     contextWindow: 524_288,
