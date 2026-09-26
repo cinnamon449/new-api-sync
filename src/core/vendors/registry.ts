@@ -253,6 +253,7 @@ const DISCOVERERS: Record<SimpleProviderKind, Discover> = {
   axon: discoverBynaraModels,
   anyapi: discoverRoutewayModels,
   blablador: discoverBlabladorModels,
+  tokenharbor: discoverRoutewayModels,
   hcnsec: discoverBynaraModels,
   tokenrouter: discoverBynaraModels,
   modal: discoverBynaraModels,
