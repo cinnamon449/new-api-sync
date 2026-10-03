@@ -120,7 +120,7 @@ export interface OpenRouterReconcile {
 
 export interface ReconcileResult {
   window: { start: number; end: number; since: string };
-  dbMode: "postgres" | "provider-only";
+  dbMode: "postgres" | "clickhouse" | "provider-only";
   providers: ProviderReconcile[];
   openrouter: OpenRouterReconcile[];
   unavailable: string[];

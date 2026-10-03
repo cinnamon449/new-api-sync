@@ -273,9 +273,10 @@ export const ConfigSchema = T.Object({
       encryptionKey: Opt(str),
     }),
   ),
-  // Read-only DSN of the gateway's own postgres, for `sync reconcile` (our
-  // logs are not reachable through the scoped service token). Absent = the
-  // reconcile runs provider-side checks only.
+  // Read-only access to the gateway's own logs, for `sync reconcile` (our logs
+  // are not reachable through the scoped service token): a postgres DSN, or the
+  // ClickHouse HTTP interface as http(s)://user:pass@host:8123/<database>.
+  // Absent = the reconcile runs provider-side checks only.
   targetDb: Opt(T.Object({ url: str })),
   // Public IPs our gateway egresses from. When set, `sync reconcile` flags
   // upstream rows logged from any other address.

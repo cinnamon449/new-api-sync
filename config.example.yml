@@ -24,6 +24,8 @@ target:
 # checks only. Locally: tsh proxy db newapi-pg --db-user reader --port 15432 --tunnel
 # targetDb:
 #   url: postgres://reader@127.0.0.1:15432/newapi
+# Once the gateway logs to ClickHouse, the HTTP interface with the database as path:
+#   url: http://reader:<password>@127.0.0.1:18123/new_api_logs
 # Public egress addresses of the gateway; upstream rows from any other ip are flagged.
 # targetEgressIps: ["203.0.113.10", "203.0.113.11"]
 blacklist:

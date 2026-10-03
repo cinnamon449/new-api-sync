@@ -22,7 +22,8 @@ bun sync fingerprints [--model glob] [--json]   # answer fingerprint ledger: tru
 a page, one page at a time per account, 750 ms apart, 429 backs off up to 80 s; every page is
 checkpointed into `logs/reconcile-cache/<provider>.jsonl` and the store object
 `reconcile/<provider>.jsonl`, 45 days retained, so a rerun fetches only the tail) and joins each row
-to our `logs` table (read-only DSN `targetDb`, bigint columns cast in the query) by
+to our `logs` table (read-only `targetDb`: a postgres DSN, or an http(s) URL for the ClickHouse log
+store, where rows without an id get a stable negative one hashed from their content) by
 `upstream_request_id` = the relay's `request_id`, on any channel including deleted lanes, then by
 tokens and time, then by model and time. Every probe the sync sends records the relay's request id
 (`testing/probe-ids.ts`, `logs/probe-ids.jsonl` and store `reconcile/probe-ids.jsonl`), so probe

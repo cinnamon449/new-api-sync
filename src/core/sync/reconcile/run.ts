@@ -24,6 +24,7 @@ import {
   fetchGatewayErrorRows,
   fetchGatewayLogs,
   fetchGatewayLogsByUpstreamIds,
+  isClickHouseUrl,
 } from "./gateway-logs";
 import { matchProvider } from "./match";
 import { checkOpenRouterKeys } from "./openrouter";
@@ -336,7 +337,11 @@ export async function runReconcile(
           ? `${opts.from}..${opts.to ?? "now"}`
           : opts.since,
     },
-    dbMode: config.targetDb ? "postgres" : "provider-only",
+    dbMode: !config.targetDb
+      ? "provider-only"
+      : isClickHouseUrl(config.targetDb.url)
+        ? "clickhouse"
+        : "postgres",
     providers,
     openrouter,
     unavailable,
@@ -413,7 +418,7 @@ export function printReconcileSummary(result: ReconcileResult): void {
         consola.warn(t("CLI.RECONCILE.UPSTREAM_INCOMPLETE", { name: p.name }));
       if (p.channelIds.length === 0)
         consola.warn(t("CLI.RECONCILE.NO_CHANNELS", { name: p.name }));
-      if (result.dbMode === "postgres") {
+      if (result.dbMode !== "provider-only") {
         consola.info(
           t("CLI.RECONCILE.MATCHED", {
             name: p.name,
