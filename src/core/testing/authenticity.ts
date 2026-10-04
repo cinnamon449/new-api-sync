@@ -8,6 +8,7 @@
  */
 
 import { paceUpstreamRequest } from "@core/infra/concurrency";
+import { fetchSameHost } from "@core/infra/http";
 import { t } from "@server/i18n";
 import {
   runRules,
@@ -108,7 +109,7 @@ const verifierTransport =
   async (args) => {
     try {
       await paceUpstreamRequest(args.url);
-      const res = await fetch(args.url, {
+      const res = await fetchSameHost(args.url, {
         method: "POST",
         headers: { ...args.headers, ...extraHeaders },
         body: JSON.stringify(args.reqBody),

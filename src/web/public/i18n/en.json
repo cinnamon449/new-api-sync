@@ -200,6 +200,7 @@
     "RUN_MALFORMED": "run log is malformed",
     "ENTRY_NOT_FOUND": "entry not found",
     "RESERVED_NAME": "name 'example' is reserved",
+    "INVALID_CONFIG_NAME": "invalid config name: {name}",
     "CONFIG_EXISTS": "config '{name}' already exists",
     "CANNOT_DELETE_MAIN": "cannot delete main or reserved configs",
     "CONFIG_NOT_FOUND": "config '{name}' not found"
@@ -214,6 +215,7 @@
     "GLOBAL_CONFIG_INVALID_YAML": "Invalid YAML in {path}: {detail}",
     "GLOBAL_CONFIG_VALIDATION_FAILED": "{detail}",
     "HTTP_ERROR": "HTTP {status} {statusText} from {url}",
+    "REDIRECT_BLOCKED": "Redirect from {from} to {to} blocked: only same host redirects are followed",
     "NEWAPI_FETCH_PRICING_FAILED": "Failed to fetch pricing from both /api/pricing_new and /api/pricing",
     "NEWAPI_TOKEN_LIST_API_FAILED": "Token list API returned success: false{detail}",
     "NEWAPI_CHANNEL_LIST_API_FAILED": "Channel list API returned success: false",

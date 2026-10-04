@@ -70,10 +70,111 @@ export async function fetchJsonResult<T>(
   );
 }
 
+const MAX_REDIRECTS = 5;
+
+// Upstreams get our keys, so a redirect is followed only on the same host
+// (TheGrid answers 307 to a signed /r/ path on its own host).
+function sameHostRedirect(
+  from: string,
+  location: string | null,
+): string | null {
+  if (!location) return null;
+  const source = new URL(from);
+  const target = new URL(location, source);
+  if (target.hostname !== source.hostname) return null;
+  if (source.protocol === "https:" && target.protocol !== "https:") return null;
+  return target.href;
+}
+
+function redirectBlocked(from: string, location: string | null): Error {
+  return new Error(
+    t("ERROR.REDIRECT_BLOCKED", {
+      from: redactUrl(from),
+      to: location ? redactUrl(new URL(location, from).href) : "?",
+    }),
+  );
+}
+
+function isRedirect(status: number): boolean {
+  return status >= 300 && status < 400 && status !== 304;
+}
+
+// 303, and 301/302 after a non GET, turn into a body-less GET, as fetch does.
+function dropsBody(status: number, method: string): boolean {
+  return (
+    status === 303 ||
+    ((status === 301 || status === 302) &&
+      method !== "GET" &&
+      method !== "HEAD")
+  );
+}
+
+/** fetch() that follows redirects only within the same host and throws on any other. */
+export async function fetchSameHost(
+  url: string | URL,
+  init: RequestInit = {},
+): Promise<Response> {
+  let current = String(url);
+  let method = init.method ?? "GET";
+  let body = init.body;
+  for (let hop = 0; ; hop++) {
+    const res = await fetch(current, {
+      ...init,
+      method,
+      body,
+      redirect: "manual",
+    });
+    if (!isRedirect(res.status)) return res;
+    const location = res.headers.get("location");
+    await res.body?.cancel().catch(() => undefined);
+    const next = sameHostRedirect(current, location);
+    if (!next || hop >= MAX_REDIRECTS) throw redirectBlocked(current, location);
+    if (dropsBody(res.status, method)) {
+      method = "GET";
+      body = undefined;
+    }
+    current = next;
+  }
+}
+
 async function fetchOnce<T>(
   url: string,
   options?: FetchOptions,
 ): Promise<FetchResult<T>> {
+  let current = url;
+  let method = (options?.method ?? "GET").toUpperCase();
+  let body = options?.body;
+  for (let hop = 0; ; hop++) {
+    const result = await fetchOnceNoRedirect<T>(current, method, body, options);
+    if (!("redirect" in result)) return result;
+    const next = sameHostRedirect(current, result.redirect.location);
+    if (!next || hop >= MAX_REDIRECTS)
+      return {
+        ok: false,
+        status: result.redirect.status,
+        message: redirectBlocked(current, result.redirect.location).message,
+      };
+    if (dropsBody(result.redirect.status, method)) {
+      method = "GET";
+      body = undefined;
+    }
+    current = next;
+  }
+}
+
+async function fetchOnceNoRedirect<T>(
+  url: string,
+  method: string,
+  body: FetchOptions["body"],
+  options?: FetchOptions,
+): Promise<
+  FetchResult<T> | { redirect: { status: number; location: string | null } }
+> {
+  // ofetch treats a 3xx as a success, so the status is captured here.
+  const seen: { status: number; location: string | null } = {
+    status: 0,
+    location: null,
+  };
   try {
     // responseType: "json" forces parse; GitHub raw serves JSON as text/plain.
     // ofetch derives one signal from `timeout` and reuses it across its own
@@ -81,14 +182,21 @@ async function fetchOnce<T>(
     // per attempt, retries done here.
     await paceUpstreamRequest(url);
     const data = await ofetch<T>(url, {
-      method: options?.method,
+      method,
       headers: options?.headers,
-      body: options?.body as Record<string, unknown> | undefined,
+      body: body as Record<string, unknown> | undefined,
       signal: AbortSignal.timeout(options?.timeoutMs ?? 10_000),
       retry: false,
       responseType: "json",
-      onResponse: ({ response }) => options?.onHeaders?.(response.headers),
+      redirect: "manual",
+      onResponse: ({ response }) => {
+        seen.status = response.status;
+        seen.location = response.headers.get("location");
+        if (!isRedirect(response.status))
+          options?.onHeaders?.(response.headers);
+      },
     });
+    if (isRedirect(seen.status)) return { redirect: seen };
     return { ok: true, data };
   } catch (err) {
     if (err instanceof FetchError && err.response)

@@ -1,4 +1,4 @@
-import { tryFetchJson } from "@core/infra/http";
+import { fetchSameHost, tryFetchJson } from "@core/infra/http";
 import type { OpenAIFreeDiscovery } from "@core/vendors/shared/openai-free-provider";
 import { t } from "@server/i18n";
 import { consola } from "consola";
@@ -41,7 +41,7 @@ async function probeOutputCap(
   model: string,
 ): Promise<number | undefined> {
   try {
-    const res = await fetch(`${base}/v1/chat/completions`, {
+    const res = await fetchSameHost(`${base}/v1/chat/completions`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,

@@ -57,9 +57,22 @@ async function mountAssets(app: Elysia) {
  * - Frontend assets served from embedded base64 bytes (prod) or disk (dev).
  * - API routes live under `/api/*`.
  */
-export const app = (await mountAssets(new Elysia())).group("/api", (api) =>
-  api.use(healthRoute).use(configRoute).use(historyRoute).use(pipelineRoute),
-);
+export const UI_HOSTNAME = "127.0.0.1";
+
+// DNS rebinding defence: the UI has no auth, so only accept requests addressed to loopback.
+function isLoopbackHost(host: string | null): boolean {
+  const port = process.env.PORT ?? "3000";
+  return host === `localhost:${port}` || host === `${UI_HOSTNAME}:${port}`;
+}
+
+export const app = (await mountAssets(new Elysia()))
+  .onRequest(({ request }) => {
+    if (!isLoopbackHost(request.headers.get("host")))
+      return new Response("Forbidden", { status: 403 });
+  })
+  .group("/api", (api) =>
+    api.use(healthRoute).use(configRoute).use(historyRoute).use(pipelineRoute),
+  );
 
 export type App = typeof app;
 
@@ -67,6 +80,6 @@ export type App = typeof app;
 // subcommand. When imported as a library (eden client), nothing happens.
 if (import.meta.main) {
   const port = Number(process.env.PORT ?? 3000);
-  app.listen(port);
+  app.listen({ port, hostname: UI_HOSTNAME });
   console.log(`new-api-sync UI running at http://localhost:${port}`);
 }

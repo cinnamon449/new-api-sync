@@ -1,3 +1,4 @@
+import { fetchSameHost } from "@core/infra/http";
 import { paceUpstreamRequest } from "@core/infra/concurrency";
 import { recordProbeRequestId } from "./probe-ids";
 import { t } from "@server/i18n";
@@ -89,7 +90,7 @@ async function rawPost(
         )
       : headers;
     await paceUpstreamRequest(url);
-    const response = await fetch(url, {
+    const response = await fetchSameHost(url, {
       method: "POST",
       headers: sendHeaders,
       body:
@@ -288,7 +289,7 @@ export async function testToolCallRequest(
   const started = Date.now();
   try {
     await paceUpstreamRequest(config.url);
-    const response = await fetch(config.url, {
+    const response = await fetchSameHost(config.url, {
       method: "POST",
       headers: config.headers,
       body: JSON.stringify(config.body),
@@ -345,7 +346,7 @@ export async function testReasoningRequest(
   const out: ReasoningProbe = { reasoningChars: 0, reasoningTokens: null, contentChars: 0 };
   try {
     await paceUpstreamRequest(config.url);
-    const response = await fetch(config.url, {
+    const response = await fetchSameHost(config.url, {
       method: "POST",
       headers: config.headers,
       body: JSON.stringify(config.body),
@@ -407,7 +408,7 @@ export async function testStreamRequest(
   });
   try {
     await paceUpstreamRequest(config.url);
-    const response = await fetch(config.url, {
+    const response = await fetchSameHost(config.url, {
       method: "POST",
       headers: config.headers,
       body: JSON.stringify(config.body),

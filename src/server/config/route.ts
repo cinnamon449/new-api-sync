@@ -33,6 +33,7 @@ const mainCandidates = () => [
   join(configDir(), "config.yaml"),
 ];
 const NAMED_RE = /^config\.([a-zA-Z0-9_-]+)\.ya?ml$/;
+const CONFIG_NAME_RE = /^[A-Za-z0-9_-][A-Za-z0-9_.-]*$/;
 
 /** Empty/undefined → main. Returns canonical path even if not yet created. */
 export function configPath(name: string | undefined): string {
@@ -43,6 +44,8 @@ export function configPath(name: string | undefined): string {
     }
     return mainCandidates()[0]!;
   }
+  if (!CONFIG_NAME_RE.test(trimmed))
+    throw new Error(t("SERVER.INVALID_CONFIG_NAME", { name: trimmed }));
   return join(configDir(), `config.${trimmed}.yml`);
 }
 

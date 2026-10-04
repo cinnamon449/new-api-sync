@@ -237,8 +237,8 @@ program
   .option("-p, --port <port>", t("CLI.OPTION.PORT"), "3000")
   .action(async (options: { port: string }) => {
     process.env.PORT = options.port;
-    const { app } = await import("@server/route");
-    app.listen(Number(options.port));
+    const { app, UI_HOSTNAME } = await import("@server/route");
+    app.listen({ port: Number(options.port), hostname: UI_HOSTNAME });
     consola.success(t("CLI.STATUS.UI_RUNNING", { port: options.port }));
   });
 

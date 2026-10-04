@@ -1,3 +1,4 @@
+import { fetchSameHost } from "@core/infra/http";
 import { SQL } from "bun";
 import { t } from "@server/i18n";
 import type { GatewayLogRow } from "./types";
@@ -90,7 +91,7 @@ async function clickhouseRows(
     headers["X-ClickHouse-User"] = decodeURIComponent(target.username);
     headers["X-ClickHouse-Key"] = decodeURIComponent(target.password);
   }
-  const res = await fetch(endpoint, {
+  const res = await fetchSameHost(endpoint, {
     method: "POST",
     headers,
     body: `${query}\nFORMAT JSONEachRow`,
