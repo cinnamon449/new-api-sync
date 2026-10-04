@@ -91,6 +91,10 @@ fork accepts a scoped sync service token instead; see "Works with upstream new-a
 | `priceAdjustment`        |          | Number or per-key object (see Price Adjustment below)   |
 | `perUpstreamConcurrency` |          | Override the global per-upstream concurrency cap        |
 
+### Free providers
+
+The sync is built to put every free model in one place. Beyond the reference integrations documented below (new-api, OpenRouter, NVIDIA NIM), `src/core/vendors/` holds about 125 provider integrations: official free tiers (Cloudflare Workers AI, Gemini, Mistral, Z.ai, ModelScope, Cohere, Groq and others), open-model hosts and routers, community networks (Gonka, AI Horde), and adapters for free web products. Each free model is probed end to end (HTTP, streaming, tool calls, authenticity) before it is published, and models that several providers serve are collapsed into one name with automatic failover between them. On UnoRouter that is currently 130+ free models from about 50 live providers; OpenRouter and NVIDIA NIM account for about 20 of them.
+
 ### OpenRouter Provider (`type: "openrouter"`)
 
 Pulls from [OpenRouter](https://openrouter.ai/). Free models (`prompt=0` and `completion=0`) are emitted as a free tier; paid models are bucketed under a per-vendor channel and a single shared `group_ratio` is picked from the candidate ladder `[1, 0.5, 0.25, 0.1, 0.05, 0.01]` such that every kept model stays at or below canonical retail. Models that don't fit at any candidate are dropped.
