@@ -731,7 +731,7 @@ const CURATED: Record<string, SourceMetadata> = {
     contextWindow: 32_000,
     maxInputTokens: 32_000,
     inputModalities: ["text"],
-    outputModalities: ["text"],
+    outputModalities: ["decisions"],
   },
   // Inception Mercury Decide (OpenRouter inception/mercury-decide:free, 2026-09-30):
   // a decisions model, absent from OpenRouter's model list like Jev.
@@ -740,7 +740,7 @@ const CURATED: Record<string, SourceMetadata> = {
     contextWindow: 32_768,
     maxInputTokens: 32_768,
     inputModalities: ["text"],
-    outputModalities: ["text"],
+    outputModalities: ["decisions"],
   },
   // Published under a short name; OpenRouter lists it as mistralai/mistral-large-4-0.
   "mistral-large-4": {

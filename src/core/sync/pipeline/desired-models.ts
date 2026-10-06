@@ -165,7 +165,8 @@ export function buildDesiredModels(opts: {
         const metadata = opts.metadataByUpstream[modelName];
         models.set(modelName, {
           model_name: modelName,
-          vendor: "typesafe",
+          // The channel type is the decisions protocol, not the maker: Mercury Decide is Inception's.
+          vendor: vendor ?? "typesafe",
           endpoints: TYPESAFE_ENDPOINTS,
           ...(metadata ? { metadata: JSON.stringify(metadata) } : {}),
         });

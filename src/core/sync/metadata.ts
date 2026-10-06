@@ -785,7 +785,8 @@ export async function runMetadataSync(
   for (const name of runwareModels)
     if (!vendorByChannel.has(name)) vendorByChannel.set(name, "runware");
   for (const name of typeSafeModels)
-    if (!vendorByChannel.has(name)) vendorByChannel.set(name, "typesafe");
+    if (!vendorByChannel.has(name))
+      vendorByChannel.set(name, inferVendorFromModelName(name) ?? "typesafe");
 
   for (const name of names) {
     // `{model}:free` published names have no `:free` key in the pricing sources;
