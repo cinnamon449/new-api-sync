@@ -106,21 +106,24 @@ export const CURATED_OVERRIDE: Record<string, SourceMetadata> = {
     contextWindow: 512_000,
     series: "Axon",
     isReasoning: true,
-    description: "Axon 1.8 Lightning is the fastest and cheapest model in Axon Labs' 1.8 line, built for quick answers and high-volume chat, with optional reasoning from none up to max.",
+    description:
+      "Axon 1.8 Lightning is the fastest and cheapest model in Axon Labs' 1.8 line, built for quick answers and high-volume chat, with optional reasoning from none up to max.",
   },
   "axon-1.8-flash": {
     releaseDate: iso("2026-09-19"),
     contextWindow: 512_000,
     series: "Axon",
     isReasoning: true,
-    description: "Axon 1.8 Flash is Axon Labs' general-purpose model: fast by default with no extra reasoning unless requested, tool calling, and a 512K context window.",
+    description:
+      "Axon 1.8 Flash is Axon Labs' general-purpose model: fast by default with no extra reasoning unless requested, tool calling, and a 512K context window.",
   },
   "axon-1.8-pro": {
     releaseDate: iso("2026-09-21"),
     contextWindow: 512_000,
     series: "Axon",
     isReasoning: true,
-    description: "Axon 1.8 Pro is the early-access flagship of Axon Labs' 1.8 line, a large mixture-of-experts model for harder reasoning and coding, available on UnoRouter before Axon's own site.",
+    description:
+      "Axon 1.8 Pro is the early-access flagship of Axon Labs' 1.8 line, a large mixture-of-experts model for harder reasoning and coding, available on UnoRouter before Axon's own site.",
   },
   "ernie-5.0": {
     // Baidu World 2025. The 2.4T technical report is dated 2026-02-06, so GA likely
@@ -266,6 +269,14 @@ export const CURATED_OVERRIDE: Record<string, SourceMetadata> = {
     releaseDate: iso("2026-07-02"),
     contextWindow: 262_144,
     maxInputTokens: 262_144,
+  },
+  "ling-3.1-flash": {
+    releaseDate: iso("2026-10-02"),
+    contextWindow: 262_144,
+    maxInputTokens: 262_144,
+    maxOutputTokens: 32_768,
+    series: "Ling",
+    supportsTools: true,
   },
   "ling-3.0-flash": {
     releaseDate: iso("2026-07-22"),
@@ -722,6 +733,51 @@ const CURATED: Record<string, SourceMetadata> = {
     inputModalities: ["text"],
     outputModalities: ["text"],
   },
+  // Inception Mercury Decide (OpenRouter inception/mercury-decide:free, 2026-09-30):
+  // a decisions model, absent from OpenRouter's model list like Jev.
+  "mercury-decide": {
+    releaseDate: iso("2026-09-30"),
+    contextWindow: 32_768,
+    maxInputTokens: 32_768,
+    inputModalities: ["text"],
+    outputModalities: ["text"],
+  },
+  // Published under a short name; OpenRouter lists it as mistralai/mistral-large-4-0.
+  "mistral-large-4": {
+    releaseDate: iso("2026-10-06"),
+    contextWindow: 524_288,
+    maxInputTokens: 524_288,
+    maxOutputTokens: 262_144,
+    series: "Mistral",
+    supportsVision: true,
+    supportsTools: true,
+  },
+  // OpenRouter's own glm-5.3 and kimi-k3 lanes, split off under or- names (config publishAs).
+  "or-glm-5.3": {
+    releaseDate: iso("2026-08-18"),
+    contextWindow: 1_048_576,
+    maxInputTokens: 1_048_576,
+    series: "GLM",
+    isReasoning: true,
+    supportsTools: true,
+  },
+  "or-kimi-k3": {
+    releaseDate: iso("2026-07-16"),
+    contextWindow: 1_048_576,
+    maxInputTokens: 1_048_576,
+    series: "Kimi",
+    isReasoning: true,
+    supportsVision: true,
+    supportsTools: true,
+  },
+  // Apodex 1.1 Mini (OpenRouter apodex/apodex-1.1-mini:free, 2026-10-01).
+  "apodex-1.1-mini": {
+    releaseDate: iso("2026-10-01"),
+    contextWindow: 262_144,
+    maxInputTokens: 262_144,
+    series: "Apodex",
+    supportsTools: true,
+  },
   // Anthropic (OpenRouter dropped the dated 3.7 id)
   "claude-3-7-sonnet-20250219": {
     releaseDate: iso("2025-02-24"),
@@ -1106,6 +1162,15 @@ const CURATED: Record<string, SourceMetadata> = {
     releaseDate: iso("2026-03-01"),
     contextWindow: 131_072,
     series: "Agnes",
+    supportsTools: true,
+  },
+  // Agnes 3.0 Flash (Sapiens AI, 2026-09-11): the API checkpoint has a 1M window;
+  // the open-weight preview is a different 262K checkpoint.
+  "agnes-3.0-flash": {
+    releaseDate: iso("2026-09-11"),
+    contextWindow: 1_000_000,
+    series: "Agnes",
+    supportsVision: true,
     supportsTools: true,
   },
   // Agnes 2.5 + async image/video lanes (provider publishes no dates; estimated)
@@ -3902,6 +3967,13 @@ const CURATED: Record<string, SourceMetadata> = {
     contextWindow: 131_072,
     series: "Sarvam",
     isReasoning: true,
+    supportsTools: true,
+  },
+  // OpenBMB MiniCPM5-2B (huggingface.co/openbmb/MiniCPM5-2B, Apache-2.0, tool calling)
+  "minicpm5-2b": {
+    releaseDate: iso("2026-09-06"),
+    contextWindow: 131_072,
+    series: "MiniCPM",
     supportsTools: true,
   },
   // OpenBMB MiniCPM5-1B (huggingface.co/openbmb/MiniCPM5-1B, Apache-2.0)
