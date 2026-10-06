@@ -30,6 +30,10 @@ import type {
 } from "@core/validations/config";
 import { t } from "@server/i18n";
 import { consola } from "consola";
+import {
+  collapseEffortVariants,
+  type EffortFamily,
+} from "../newapi/effort-variants";
 import { buildCapabilityMap, passthroughExposed } from "./capability-map";
 import { partitionByVendor } from "./partition";
 
@@ -121,6 +125,8 @@ function emitFreeTextOffers(opts: {
   paramOverride?: string;
   /** Exposed glob to the name that lane publishes under (provider config `publishAs`). */
   publishAs?: Record<string, string>;
+  /** Stand-in upstream id -> its effort family (provider config `collapseEfforts`). */
+  effortFamilies?: Map<string, EffortFamily>;
 }): UpstreamOffer[] {
   const offers: UpstreamOffer[] = [];
   const channelType = opts.channelType ?? CHANNEL_TYPES.OPENAI;
@@ -147,6 +153,8 @@ function emitFreeTextOffers(opts: {
   );
   const toOfferModel = (x: Resolution): OfferModel => {
     const upstream = opts.rev[x.exposed] ?? x.upstream;
+    const family = opts.effortFamilies?.get(x.upstream);
+    const publishAs = publishAsFor(x.exposed) ?? family?.base;
     const maxOut = opts.maxOutputByModel.get(upstream);
     const configMeta = configMetadataFor(x.exposed);
     const metadata: ModelMetadata = {
@@ -174,9 +182,8 @@ function emitFreeTextOffers(opts: {
       ...(opts.endpoints ? { endpoints: opts.endpoints } : {}),
       ...(Object.keys(metadata).length ? { metadata } : {}),
       ...(opts.paramOverride ? { paramOverride: opts.paramOverride } : {}),
-      ...(publishAsFor(x.exposed)
-        ? { publishAs: publishAsFor(x.exposed) }
-        : {}),
+      ...(publishAs ? { publishAs } : {}),
+      ...(family ? { effortVariants: family.variants } : {}),
     };
   };
   const buildOffer = (
@@ -270,6 +277,12 @@ export async function processOpenAICompatibleFreeProvider(
       report.error = t("CORE.ERROR.ALL_MODELS_FILTERED_SHORT");
       return { report, offers, endpointMetadata };
     }
+    let effortFamilies: Map<string, EffortFamily> | undefined;
+    if (providerConfig.collapseEfforts) {
+      const collapsed = collapseEffortVariants(allModels, () => "free");
+      allModels = collapsed.models;
+      effortFamilies = collapsed.families;
+    }
 
     const channelType = opts.channelType ?? CHANNEL_TYPES.OPENAI;
     const mapExposed = (opts.exposedMapper ?? passthroughExposed)(config);
@@ -350,6 +363,7 @@ export async function processOpenAICompatibleFreeProvider(
             completionRatioByModel,
             paramOverride: opts.paramOverride,
             publishAs: providerConfig.publishAs,
+            effortFamilies,
             metadataByModel: getMetadataFromEnabledModels(
               providerConfig.enabledModels,
             ),
@@ -416,6 +430,7 @@ export async function processOpenAICompatibleFreeProvider(
           completionRatioByModel,
           paramOverride: opts.paramOverride,
           publishAs: providerConfig.publishAs,
+          effortFamilies,
           metadataByModel: getMetadataFromEnabledModels(
             providerConfig.enabledModels,
           ),

@@ -132,6 +132,9 @@ const SimpleFreeProviderSchema = T.Object({
   // the fence and narrower than scoping it per offender, since a new offender
   // is still blocked by default.
   allowBlacklisted: Opt(T.Array(str)),
+  // One id per effort (gemini-3.7-flash-low, -medium) collapses into a single lane under
+  // the base name; the gateway picks the variant from reasoning_effort via `@effort:` keys.
+  collapseEfforts: Opt(T.Boolean()),
 });
 const ComfyUiTemplateSchema = T.Object(
   {

@@ -259,6 +259,7 @@ const DISCOVERERS: Record<SimpleProviderKind, Discover> = {
   atria: discoverBynaraModels,
   codecraft: discoverBynaraModels,
   toptools: discoverBynaraModels,
+  sayuki: discoverBynaraModels,
   aaawinn: discoverBynaraModels,
   hcnsec: discoverBynaraModels,
   tokenrouter: discoverBynaraModels,

@@ -1349,6 +1349,16 @@ export const SIMPLE_PROVIDER_META = [
     apiKeyPlaceholder: "sk-...",
   },
   {
+    kind: "sayuki",
+    label: "Sayuki Proxy",
+    // sayuki-proxy.com - an Antigravity reverse proxy; effort is baked into the id
+    // (gemini-3.7-flash-low, gemini-3.1-pro-high), and some ids answer behind a
+    // "PSH AI Agent" persona prompt. Free, about 6 requests a minute per key.
+    defaultBaseUrl: "https://sayuki-proxy.com",
+    defaultRatio: 0,
+    apiKeyPlaceholder: "sayuki-...",
+  },
+  {
     kind: "atria",
     label: "Atria ASI",
     // api.atria-asi.ai - preview API for Atria-Dawn-Preview (self-reports Shanghai AI
