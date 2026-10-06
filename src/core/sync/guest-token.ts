@@ -1,5 +1,6 @@
 import { modelsOnChannels } from "@core/catalog/constants/patterns";
 import type { Channel } from "@core/types";
+import { buildTypeSafeModels } from "@core/sync/pipeline/desired-models";
 import type { NewApiClient } from "@core/vendors/newapi/client";
 import { t } from "@server/i18n";
 import { consola } from "consola";
@@ -24,13 +25,16 @@ export async function updateGuestTokenIfConfigured(
   if (!guestKey)
     return { configured: false, updated: false, freeModelCount: 0 };
 
+  const decisionsOnly = buildTypeSafeModels(channels);
   const freeNames = [
     ...modelsOnChannels(channels, {
       enabledOnly: false,
       includeAliases: false,
     }),
   ]
-    .filter((name) => name.endsWith(":free"))
+    // The guest token feeds the site's free chat; a decisions model cannot chat and
+    // every chat request to it failed.
+    .filter((name) => name.endsWith(":free") && !decisionsOnly.has(name))
     .sort();
   const ok = await target.updateGuestTokenModelLimits(
     guestKey,
