@@ -19,6 +19,7 @@ import type { MergedGroup, ProviderReport } from "@core/types";
 import type { A7ProviderConfig } from "@core/validations/config";
 import { inferVendorFromModelName } from "@core/catalog/constants/vendor-matchers";
 import { consola } from "consola";
+import pLimit from "p-limit";
 import { t } from "@server/i18n";
 import {
   DEFAULT_MAX_SELL_FRACTION,
@@ -51,6 +52,7 @@ const THROTTLE_FAIL_RATIO = 0.2;
 // no model starts after this; one not reached keeps its lanes and tokens, exactly
 // like a model the marketplace could not describe this run.
 const WALK_BUDGET_MS = 150 * 60_000;
+const A7_MODEL_PARALLEL = 3;
 
 interface ModelCandidates {
   model: string;
@@ -389,26 +391,14 @@ export async function processA7Provider(
 
     const loopStart = Date.now();
     const elapsed = () => `${Math.round((Date.now() - loopStart) / 1000)}s`;
-    let modelIdx = 0;
-    for (const mc of models) {
-      modelIdx++;
+    const deferredAt: number[] = [];
+    const walkModel = async (
+      mc: (typeof models)[number],
+      modelIdx: number,
+    ): Promise<void> => {
       if (Date.now() - loopStart >= WALK_BUDGET_MS) {
-        const deferred = models.slice(modelIdx - 1).map((m) => m.model);
-        for (const m of deferred) {
-          unverifiedMarket.add(m);
-          (report.unverifiedModels ??= []).push(
-            (config.modelMapping?.[m] ?? m).toLowerCase(),
-          );
-        }
-        consola.warn(
-          t("CORE.A7.WALK_BUDGET", {
-            provider: name,
-            elapsed: elapsed(),
-            count: deferred.length,
-            models: deferred.join(", "),
-          }),
-        );
-        break;
+        deferredAt.push(modelIdx);
+        return;
       }
       const modelStart = Date.now();
       // Walk the cheap-sorted candidates until `wanted` merchants pass their
@@ -548,7 +538,7 @@ export async function processA7Provider(
       consola.info(
         `[${name}] ${mc.model} done: ${kept.length} lane(s) in ${Math.round((Date.now() - modelStart) / 1000)}s, ${models.length - modelIdx} model(s) left`,
       );
-      if (kept.length === 0) continue;
+      if (kept.length === 0) return;
       keptLanes.push(...kept.map((k) => k.lane));
 
       // Cheapest KEPT lane per model gets the plain channel; the rest are
@@ -569,6 +559,31 @@ export async function processA7Provider(
             mc.canonicalListUsd,
           ),
         );
+    };
+    // Models walk side by side; every probe still passes the per-upstream gate,
+    // so the load on a7 stays capped while one slow merchant no longer idles the rest.
+    const walkLimit = pLimit(A7_MODEL_PARALLEL);
+    await Promise.all(
+      models.map((mc, i) => walkLimit(() => walkModel(mc, i + 1))),
+    );
+    if (deferredAt.length > 0) {
+      const deferred = deferredAt
+        .sort((a, b) => a - b)
+        .map((i) => models[i - 1]!.model);
+      for (const m of deferred) {
+        unverifiedMarket.add(m);
+        (report.unverifiedModels ??= []).push(
+          (config.modelMapping?.[m] ?? m).toLowerCase(),
+        );
+      }
+      consola.warn(
+        t("CORE.A7.WALK_BUDGET", {
+          provider: name,
+          elapsed: elapsed(),
+          count: deferred.length,
+          models: deferred.join(", "),
+        }),
+      );
     }
 
     consola.info(`[${name}] pins: +${pinsCreated} ~${pinsRepinned}`);

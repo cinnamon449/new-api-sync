@@ -9,8 +9,13 @@ import { join } from "path";
 // gateway. The relay echoes its request id, so the id is recorded here and
 // `sync reconcile` can account for those rows exactly.
 const FILE = "probe-ids.jsonl";
-export const PROBE_IDS_OBJECT = "reconcile/probe-ids.jsonl";
-const RETENTION_SECONDS = 7 * 24 * 3600;
+const RETENTION_DAYS = 7;
+const RETENTION_SECONDS = RETENTION_DAYS * 24 * 3600;
+// One object per UTC day, so a flush rewrites only today's lines.
+const dayObject = (at: number) =>
+  `reconcile/probe-ids/${new Date(at).toISOString().slice(0, 10)}.jsonl`;
+// Pre-split object; drop after 2026-10-14 once its ids age out.
+const LEGACY_OBJECT = "reconcile/probe-ids.jsonl";
 const HEADER = "x-oneapi-request-id";
 
 interface ProbeIdLine {
@@ -50,7 +55,11 @@ export async function flushProbeIds(store: VerdictStore | null): Promise<void> {
   if (!store || pending.length === 0) return;
   const lines = pending.splice(0);
   try {
-    await store.appendText(PROBE_IDS_OBJECT, lines, "application/x-ndjson");
+    await store.appendText(
+      dayObject(Date.now()),
+      lines,
+      "application/x-ndjson",
+    );
   } catch (err) {
     pending.unshift(...lines);
     consola.warn(
@@ -86,8 +95,13 @@ export async function loadProbeIds(
     parseLines(readFileSync(localPath(), "utf8"), cutoff, ids);
   if (store) {
     try {
-      const remote = await store.readText(PROBE_IDS_OBJECT);
-      if (remote) parseLines(remote, cutoff, ids);
+      const objects = [LEGACY_OBJECT];
+      for (let d = 0; d <= RETENTION_DAYS; d++)
+        objects.push(dayObject(Date.now() - d * 86_400_000));
+      for (const name of objects) {
+        const remote = await store.readText(name);
+        if (remote) parseLines(remote, cutoff, ids);
+      }
     } catch (err) {
       consola.warn(
         t("CORE.PROBE_IDS.PULL_FAILED", {

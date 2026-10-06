@@ -38,7 +38,7 @@ const SUMMARY_FILE = "answer-fingerprints-summary.json";
 const STORE_OBJECT = "answer-fingerprints.json";
 const STORE_SUMMARY = "answer-fingerprints/summary.json";
 const KEEP_RUNS = 60;
-const KEEP_DAYS = 30;
+const KEEP_DAYS = 14;
 const HISTORY_WINDOW = 10;
 // A lane is asked the battery until it holds this many sampled runs, then once a
 // day: 24 extra calls on every ladder run pushed the re-verify tick and the full
@@ -108,17 +108,26 @@ const isEntry = (e: unknown): e is FingerprintEntry =>
   typeof (e as FingerprintEntry).key === "string" &&
   Array.isArray((e as FingerprintEntry).runs);
 
+// The library keeps each reply in `sample.raw`; nothing reads it back and it was a
+// third of the store.
+const withoutRaw = (r: FingerprintRun): FingerprintRun =>
+  r.sample?.raw ? { ...r, sample: { ...r.sample, raw: undefined } } : r;
+
+function keptRuns(runs: FingerprintRun[]): FingerprintRun[] {
+  const byAt = new Map<string, FingerprintRun>();
+  for (const r of runs) byAt.set(r.at, withoutRaw(r));
+  const cutoff = Date.now() - KEEP_DAYS * 86_400_000;
+  return [...byAt.values()]
+    .filter((r) => Date.parse(r.at) >= cutoff)
+    .sort((x, y) => x.at.localeCompare(y.at))
+    .slice(-KEEP_RUNS);
+}
+
 function mergeEntries(
   a: FingerprintEntry,
   b: FingerprintEntry,
 ): FingerprintEntry {
-  const byAt = new Map<string, FingerprintRun>();
-  for (const r of [...a.runs, ...b.runs]) byAt.set(r.at, r);
-  const cutoff = Date.now() - KEEP_DAYS * 86_400_000;
-  const runs = [...byAt.values()]
-    .filter((r) => Date.parse(r.at) >= cutoff)
-    .sort((x, y) => x.at.localeCompare(y.at))
-    .slice(-KEEP_RUNS);
+  const runs = keptRuns([...a.runs, ...b.runs]);
   const newer = (a.judgedAt ?? "") >= (b.judgedAt ?? "") ? a : b;
   return { ...b, ...a, ...pickJudgement(newer), runs };
 }
@@ -143,7 +152,10 @@ function mergeAll(
     const prior = out.get(e.key);
     out.set(e.key, prior ? mergeEntries(e, prior) : e);
   }
-  return [...out.values()];
+  // A lane with no run inside KEEP_DAYS is a delisted merchant; its entry only costs memory.
+  return [...out.values()]
+    .map((e) => ({ ...e, runs: keptRuns(e.runs) }))
+    .filter((e) => e.runs.length > 0);
 }
 
 export async function loadAnswerFingerprints(
@@ -190,7 +202,7 @@ export function recordFingerprintRun(opts: {
     family: opts.family,
     maker: opts.maker,
     host: opts.host,
-    runs: [opts.run],
+    runs: [withoutRaw(opts.run)],
   };
   entries.set(opts.key, prior ? mergeEntries(prior, fresh) : fresh);
 }
@@ -426,7 +438,7 @@ export function judgeAllLanes(sourceOf: SourceOf): FingerprintSummary {
 }
 
 export function saveAnswerFingerprints(summary?: FingerprintSummary): void {
-  writeJsonAtomic(cachePath(), [...entries.values()]);
+  writeJsonAtomic(cachePath(), [...entries.values()], { pretty: false });
   if (summary) writeJsonAtomic(join(logsDir(), SUMMARY_FILE), summary);
 }
 
@@ -457,7 +469,7 @@ export async function judgeAndPushAnswerFingerprints(
     );
     entries.clear();
     for (const e of merged) entries.set(e.key, e);
-    writeJsonAtomic(cachePath(), merged);
+    writeJsonAtomic(cachePath(), merged, { pretty: false });
   } catch (err) {
     consola.warn(
       t("CORE.FINGERPRINT.PUSH_FAILED", {

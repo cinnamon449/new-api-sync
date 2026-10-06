@@ -411,7 +411,7 @@ async function pushOnce(store: VerdictStore): Promise<void> {
     const final = mergeVerdicts(merged, [...cache.values()]);
     cache.clear();
     for (const e of final) cache.set(e.key, e);
-    writeJsonAtomic(cachePath(), final);
+    writeJsonAtomic(cachePath(), final, { pretty: false });
     lastPushAt = Date.now();
     consola.info(
       t("CORE.VERDICT_STORE.PUSHED", {
@@ -432,7 +432,7 @@ async function pushOnce(store: VerdictStore): Promise<void> {
 // Every verdict write lands on disk at once and in the store at most every
 // interval, so a run killed at any point (Job deadline, OOM, Ctrl-C) keeps
 // what it probed: the next run loads the local file before merging the store.
-const PUSH_MIN_INTERVAL_MS = 2 * 60 * 1000;
+const PUSH_MIN_INTERVAL_MS = 10 * 60 * 1000;
 
 function persist(): void {
   saveVerdictCache();
@@ -443,7 +443,7 @@ function persist(): void {
 
 export function saveVerdictCache(): void {
   if (cache.size === 0) return;
-  writeJsonAtomic(cachePath(), [...cache.values()]);
+  writeJsonAtomic(cachePath(), [...cache.values()], { pretty: false });
   void flushVerdictHistory();
 }
 
@@ -538,7 +538,9 @@ export function clearReasoningFail(key: string): void {
 
 export function isReasoningFresh(key: string): boolean {
   const at = cache.get(key)?.reasoning?.at;
-  return !!at && Date.now() - Date.parse(at) < REASONING_TTL_HOURS * 60 * 60 * 1000;
+  return (
+    !!at && Date.now() - Date.parse(at) < REASONING_TTL_HOURS * 60 * 60 * 1000
+  );
 }
 
 export function recordTokenizerDelta(key: string, delta: number): void {

@@ -17,9 +17,18 @@ export function readJson<T>(path: string): T | null {
 }
 
 /** Atomic write: tmp + rename so a SIGKILL mid-write leaves the previous file intact. */
-export function writeJsonAtomic(path: string, data: unknown): void {
+export function writeJsonAtomic(
+  path: string,
+  data: unknown,
+  opts: { pretty?: boolean } = {},
+): void {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = `${path}.tmp`;
-  writeFileSync(tmp, JSON.stringify(data, null, 2));
+  writeFileSync(
+    tmp,
+    opts.pretty === false
+      ? JSON.stringify(data)
+      : JSON.stringify(data, null, 2),
+  );
   renameSync(tmp, path);
 }
