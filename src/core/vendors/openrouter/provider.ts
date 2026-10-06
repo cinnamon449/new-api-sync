@@ -335,7 +335,12 @@ export async function processOpenRouterProvider(
           });
           if (provisioned.minted > 0) {
             if (keyStore?.canHoldKeys)
-              await keyStore.putProvisionedKeys(name, provisioned.keyByName);
+              // Merged, never replaced: a run that sees only some models (a filter, a
+              // discovery gap) wiped every other secret on 2026-09-29.
+              await keyStore.putProvisionedKeys(
+                name,
+                new Map([...existingKeyByName, ...provisioned.keyByName]),
+              );
             else
               consola.warn(
                 `[${name}] ${provisioned.minted} key(s) minted with nowhere to store the secret; the next run will mint again`,

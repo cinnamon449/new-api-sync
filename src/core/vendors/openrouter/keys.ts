@@ -56,13 +56,23 @@ async function listRemote<T>(
   managementKey: string,
   path: string,
 ): Promise<T[]> {
-  const body = await fetchJson<{ data?: T[] }>(api(baseUrl, path), {
-    headers: auth(managementKey),
-    timeoutMs: 30_000,
-    retry: 3,
-    retryDelayMs: 2000,
-  });
-  return body?.data ?? [];
+  // Pages of 50: an unread second page made existing guardrails look missing.
+  const out: T[] = [];
+  for (let offset = 0; ; offset += 50) {
+    const body = await fetchJson<{ data?: T[]; total_count?: number }>(
+      api(baseUrl, `${path}?offset=${offset}`),
+      {
+        headers: auth(managementKey),
+        timeoutMs: 30_000,
+        retry: 3,
+        retryDelayMs: 2000,
+      },
+    );
+    const page = body?.data ?? [];
+    out.push(...page);
+    if (page.length === 0 || out.length >= (body?.total_count ?? out.length))
+      return out;
+  }
 }
 
 /**
@@ -107,6 +117,22 @@ export async function ensureProvisionedKeys(args: {
   const guardrailByName = new Map(
     guardrails.filter((g) => g.name).map((g) => [g.name as string, g]),
   );
+
+  // Checked before any mint: the per-model abort below ran after concurrent mints
+  // had already started, and their secrets were lost with the throw.
+  if (args.requireStore) {
+    const lost = args.models
+      .map((model) => keyName(args.provider, model))
+      .filter((name) => {
+        const remote = remoteByName.get(name);
+        const held = args.existingKeyByName.get(name);
+        return remote?.hash && !(held && sha256(held) === remote.hash);
+      });
+    if (lost.length > 0)
+      throw new Error(
+        `openrouter: ${lost.length} key(s) exist upstream without a secret in the key store (${lost.slice(0, 5).join(", ")}${lost.length > 5 ? ", ..." : ""}); seed the store or clear requireKeyStore on ${args.provider}`,
+      );
+  }
 
   const keyByModel = new Map<string, string>();
   const keyByName = new Map<string, string>();
@@ -228,7 +254,9 @@ async function ensureGuardrail(args: {
   }
   let id = args.existing?.id;
   if (!id) {
-    const created = await fetchJson<{ data?: { id?: string } }>(
+    // A refused allowlist must not throw: by now the key is minted and its secret
+    // lives only in this run, so a throw strands every key minted beside it.
+    const created = await fetchJsonResult<{ data?: { id?: string } }>(
       api(args.baseUrl, "/v1/guardrails"),
       {
         method: "POST",
@@ -243,7 +271,13 @@ async function ensureGuardrail(args: {
         retryDelayMs: 2000,
       },
     );
-    id = created?.data?.id;
+    if (!created.ok) {
+      consola.warn(
+        `[openrouter] guardrail for ${args.name} refused (${created.message}), key left daily capped without a model allowlist`,
+      );
+      return;
+    }
+    id = created.data?.data?.id;
   }
   if (!id || !args.keyHash) return;
   await fetchJsonResult(
