@@ -75,19 +75,22 @@ async function paginate<T>(
 // 1667 of 1677 channels returned without it - the 10 lost ones then read as dead
 // groups and the group prune deleted their visibility.
 export async function listChannels(ctx: ClientContext): Promise<Channel[]> {
-  // The total drifts while another sync deletes channels mid walk; a second
-  // walk after the churn is complete again (1696 of 1698 on 2026-09-21).
-  try {
-    return await walkChannels(ctx);
-  } catch (err) {
-    if (
-      !(err instanceof Error) ||
-      !err.message.startsWith("channel list incomplete")
-    )
-      throw err;
-    await new Promise((r) => setTimeout(r, 3000));
-    return walkChannels(ctx);
+  // The total drifts while another sync creates or deletes channels mid walk; a
+  // later walk is complete again (1696 of 1698 on 2026-09-21). One retry 3s later
+  // was not enough while a 12 minute local sync kept churning (2238 of 2241).
+  for (const waitMs of [3_000, 10_000, 30_000]) {
+    try {
+      return await walkChannels(ctx);
+    } catch (err) {
+      if (
+        !(err instanceof Error) ||
+        !err.message.startsWith("channel list incomplete")
+      )
+        throw err;
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
   }
+  return walkChannels(ctx);
 }
 
 async function walkChannels(ctx: ClientContext): Promise<Channel[]> {
