@@ -194,6 +194,17 @@ export function selectMerchants(
   canonicalListUsd: number | undefined,
   blacklist?: string[],
 ): Listing[] {
+  // Match upstream model names before publishing/renaming, like hostsPerModel.
+  // No matching rule preserves automatic selection; [] means no candidates,
+  // including when every allowed merchant is absent or fails eligibility.
+  const allowlist = provider.merchantAllowlist;
+  const allowed = allowlist
+    ? (Object.entries(allowlist).find(([glob]) =>
+        matchesAnyPattern(model, [glob]),
+      )?.[1] ?? allowlist["default"])
+    : undefined;
+  const allowedIds = allowed === undefined ? undefined : new Set(allowed);
+
   const minSuccess = resolvePerModel(
     provider.minSuccessRate,
     model,
@@ -240,6 +251,7 @@ export function selectMerchants(
   const viable = rows
     .filter(
       (r) =>
+        (allowedIds === undefined || allowedIds.has(r.channel_id)) &&
         !excluded(r) &&
         r.charge_type === "per_token" &&
         r.listing_availability === 1 &&

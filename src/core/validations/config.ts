@@ -63,11 +63,19 @@ const MaxSellFractionSchema = PerModel(
 );
 const MinSellFractionSchema = PerModel(T.Number({ minimum: 0, maximum: 1 }));
 const MinSellersSchema = PerModel(T.Integer({ minimum: 1 }));
+// Marketplace channel IDs, keyed by model/glob (first match wins), with an
+// optional "default". An empty list deliberately permits no merchants.
+const MerchantAllowlistSchema = T.Record(
+  str,
+  T.Array(T.Integer({ minimum: 1, maximum: Number.MAX_SAFE_INTEGER }), {
+    uniqueItems: true,
+  }),
+);
 // prettier-ignore
 // A marketplace, not a relay: /api/pricing publishes one placeholder ratio for
 // every model, so price comes from the per-merchant listings, and one upstream
 // token is minted and pinned per (model, merchant) lane.
-const A7ProviderSchema = T.Object({ type: T.Literal("a7"), ...ProviderCommonProps, baseUrl: uri, systemAccessToken: str, userId: T.Integer({ minimum: 1 }), profitMultiple: Opt(ProfitMultipleSchema), maxSellFraction: Opt(MaxSellFractionSchema), minSellFraction: Opt(MinSellFractionSchema), hostsPerModel: Opt(T.Record(T.String(), T.Integer({ minimum: 1 }))), minSuccessRate: Opt(PerModel(T.Integer({ minimum: 0, maximum: 10000 }))), guaranteedOnly: Opt(T.Boolean()), acceptRateLimited: Opt(T.Boolean()) });
+const A7ProviderSchema = T.Object({ type: T.Literal("a7"), ...ProviderCommonProps, baseUrl: uri, systemAccessToken: str, userId: T.Integer({ minimum: 1 }), profitMultiple: Opt(ProfitMultipleSchema), maxSellFraction: Opt(MaxSellFractionSchema), minSellFraction: Opt(MinSellFractionSchema), hostsPerModel: Opt(T.Record(T.String(), T.Integer({ minimum: 1 }))), merchantAllowlist: Opt(MerchantAllowlistSchema), minSuccessRate: Opt(PerModel(T.Integer({ minimum: 0, maximum: 10000 }))), guaranteedOnly: Opt(T.Boolean()), acceptRateLimited: Opt(T.Boolean()) });
 // prettier-ignore
 // A flat allowlist, or glob-keyed per model ("claude-*": [bedrock]) with "default" as the catch-all.
 const PoolAllowlistSchema = T.Union([T.Array(str, { minItems: 1 }), T.Record(T.String(), T.Array(str))]);

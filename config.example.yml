@@ -131,6 +131,19 @@ providers:
   # - type: a7
   #   name: a7
   #   authenticityPassTtlHours: 4
+  #   # Allow only these marketplace channel_id values (not listing/account IDs).
+  #   # Model names/globs are case-insensitive; first matching rule wins.
+  #   # Optional default applies to unmatched models. Without a match/default,
+  #   # selection stays automatic; [] allows none. No outside-list fallback.
+  #   # Price, availability, health and blacklist checks still apply.
+  #   merchantAllowlist:
+  #     gpt-6-luna: [4482]
+  #     "claude-*": [4134, 3767]
+  #     default: []
+  #   # Multiple allowed merchants are still limited by hostsPerModel (default 1),
+  #   # choosing the cheapest eligible merchants within the allowlist.
+  #   hostsPerModel:
+  #     "claude-*": 2
   # Every text lane runs the authenticity ladder, judged against the model's maker.
   # Only anthropic's findings reject a lane; every other maker is observed (the
   # finding is logged to logs/observe-<date>.jsonl, the lane passes) until the log
