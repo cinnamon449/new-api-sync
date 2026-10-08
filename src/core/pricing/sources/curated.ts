@@ -778,6 +778,18 @@ const CURATED: Record<string, SourceMetadata> = {
     series: "Apodex",
     supportsTools: true,
   },
+  // Claude Haiku 5.5 (OpenRouter anthropic/claude-haiku-5.5, 2026-10-07), published
+  // under the dashed name the relays use, like claude-sonnet-5-5.
+  "claude-haiku-5-5": {
+    releaseDate: iso("2026-10-07"),
+    contextWindow: 1_000_000,
+    maxInputTokens: 1_000_000,
+    maxOutputTokens: 128_000,
+    series: "Claude",
+    isReasoning: true,
+    supportsVision: true,
+    supportsTools: true,
+  },
   // Anthropic (OpenRouter dropped the dated 3.7 id)
   "claude-3-7-sonnet-20250219": {
     releaseDate: iso("2025-02-24"),
