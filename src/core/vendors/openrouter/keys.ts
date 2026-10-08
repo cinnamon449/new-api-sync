@@ -26,6 +26,7 @@ interface RemoteKey {
 interface Guardrail {
   id?: string;
   name?: string;
+  limit_usd?: number;
 }
 
 export interface ProvisionedKeys {
@@ -155,6 +156,22 @@ export async function ensureProvisionedKeys(args: {
           keyByModel.set(model, held);
           keyByName.set(name, held);
           reused++;
+          // The guardrail carries its own daily cap; only the key's was ever raised,
+          // so glm-5.3 kept a $15 guardrail under a $60 key and all 30 lanes went
+          // dark at $15 (2026-10-08).
+          const guardrail = guardrailByName.get(name);
+          if (guardrail?.id && guardrail.limit_usd !== dailyLimitUsd) {
+            await fetchJsonResult(
+              api(args.baseUrl, `/v1/guardrails/${guardrail.id}`),
+              {
+                method: "PATCH",
+                headers: auth(args.managementKey),
+                body: { limit_usd: dailyLimitUsd },
+                retry: 2,
+                retryDelayMs: 2000,
+              },
+            );
+          }
           if (remote.limit !== dailyLimitUsd && remote.hash) {
             await fetchJsonResult(
               api(args.baseUrl, `/v1/keys/${remote.hash}`),
