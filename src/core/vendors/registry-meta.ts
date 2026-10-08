@@ -1349,6 +1349,16 @@ export const SIMPLE_PROVIDER_META = [
     apiKeyPlaceholder: "sk-...",
   },
   {
+    kind: "furryvg",
+    label: "S3AI (ai.furry.vg)",
+    // ai.furry.vg - new-api relay with a "free" group at 0.0001x whose zero-priced
+    // ids end in -free; the wallet must stay above zero or every call is refused.
+    // Free models share a global rate limit, and its gpt-5.6-luna forbids downstream use.
+    defaultBaseUrl: "https://ai.furry.vg",
+    defaultRatio: 0,
+    apiKeyPlaceholder: "sk-...",
+  },
+  {
     kind: "sayuki",
     label: "Sayuki Proxy",
     // sayuki-proxy.com - an Antigravity reverse proxy; effort is baked into the id
