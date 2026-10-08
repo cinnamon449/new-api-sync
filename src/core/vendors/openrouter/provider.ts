@@ -196,6 +196,15 @@ async function fetchOpenRouterBalance(
   return c === undefined || u === undefined ? null : c - u;
 }
 
+function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2
+    ? sorted[mid]!
+    : (sorted[mid - 1]! + sorted[mid]!) / 2;
+}
+
 export async function processOpenRouterProvider(
   providerConfig: OpenRouterProviderConfig,
   config: RuntimeConfig,
@@ -521,12 +530,36 @@ export async function processOpenRouterProvider(
             // provider+quantization, so two such rows produce one name and the
             // emit step aborts the whole run on the collision. Keep the cheapest
             // row per tag: the dearer duplicate has nothing else to offer.
+            // new-api prices output and cache per MODEL, so a lane differs only by
+            // its input price. relace sold glm-5.3 at $0.06 in but $12 out, and the
+            // lane billed output at a thirtieth of cost while ranking as the
+            // cheapest host. Price and rank each host by an effective input that
+            // covers the dearest of input, output and cache at the model's typical
+            // ratios (the median across its hosts, so one outlier cannot set it).
+            const typicalOut = median(
+              reliableHosts
+                .filter((h) => h.prompt > 0)
+                .map((h) => h.completion / h.prompt),
+            );
+            const typicalCache = median(
+              reliableHosts
+                .filter((h) => h.prompt > 0 && h.cacheRead != null)
+                .map((h) => (h.cacheRead ?? 0) / h.prompt),
+            );
+            const effectivePrompt = (h: (typeof reliableHosts)[number]) =>
+              Math.max(
+                h.prompt,
+                typicalOut > 0 ? h.completion / typicalOut : 0,
+                typicalCache > 0 && h.cacheRead != null
+                  ? h.cacheRead / typicalCache
+                  : 0,
+              );
             const cheapestByTag = new Map<
               string,
               (typeof reliableHosts)[number]
             >();
             for (const host of [...reliableHosts].sort(
-              (a, b) => a.prompt - b.prompt,
+              (a, b) => effectivePrompt(a) - effectivePrompt(b),
             )) {
               const tag = quantTag(host.tag, host.quantization);
               if (!cheapestByTag.has(tag)) cheapestByTag.set(tag, host);
@@ -563,12 +596,15 @@ export async function processOpenRouterProvider(
                         r.upstream,
                         host.supportedParameters,
                       )),
-                upstreamRatio: (host.prompt * 1_000_000) / USD_PER_M_PER_RATIO,
+                upstreamRatio:
+                  (effectivePrompt(host) * 1_000_000) / USD_PER_M_PER_RATIO,
                 upstreamCompletionRatio:
-                  host.prompt > 0 ? host.completion / host.prompt : 1,
+                  effectivePrompt(host) > 0
+                    ? host.completion / effectivePrompt(host)
+                    : 1,
                 cacheRatio:
-                  host.cacheRead != null && host.prompt > 0
-                    ? host.cacheRead / host.prompt
+                  host.cacheRead != null && effectivePrompt(host) > 0
+                    ? host.cacheRead / effectivePrompt(host)
                     : undefined,
                 paramOverride: JSON.stringify({
                   provider: { only: [host.provider], allow_fallbacks: false },
