@@ -15,6 +15,7 @@ import type { ModelTestDetail } from "@core/testing/types";
 import type { ProviderReport } from "@core/types";
 import type { SiProviderConfig } from "@core/validations/config";
 import { resolvePerModel } from "@core/pricing";
+import { SIMPLE_PROVIDER_META_MAP } from "@core/vendors/registry-meta";
 import {
   buildFallbackOffer,
   DEFAULT_MIN_SELLERS,
@@ -45,6 +46,12 @@ const FLOOR_CAP_PCT = 90;
 // seller it still admits at this multiple.
 const WORST_CASE_MULTIPLE = 2;
 const BOOK_CONCURRENCY = 3;
+// Google's sellers answer 400 "Unknown name top_k" like our own Gemini lanes, and
+// RP clients send those fields by default, so a pin reaching them strips the same set.
+const GOOGLE_SELLER_PINS = new Set(["google-ai-studio", "google-vertex"]);
+const GOOGLE_STRIP_OPERATIONS: Record<string, unknown>[] = JSON.parse(
+  SIMPLE_PROVIDER_META_MAP.gemini?.paramOverride ?? '{"operations":[]}',
+).operations;
 
 function sellerPin(
   offer: BookOffer,
@@ -229,7 +236,12 @@ export async function processSiProvider(
           baseUrl: claude
             ? `${baseUrl}/anthropic/min${floor}`
             : `${baseUrl}/min${floor}`,
-          operations: [{ mode: "set", path: "provider", value: pins }],
+          operations: [
+            { mode: "set", path: "provider", value: pins },
+            ...(pins.some((pin) => GOOGLE_SELLER_PINS.has(pin))
+              ? GOOGLE_STRIP_OPERATIONS
+              : []),
+          ],
           probeBody: { provider: pins },
           remark: `${exposed} via ${name} (${eligible.length} trusted sellers on ${pins.join(", ")}, priced on the #${minSellers} ask, floor ${floor}% under list)`,
         });
@@ -293,7 +305,10 @@ export async function processSiProvider(
     // One lane's own quota answer is ordinary, so it takes half the run.
     if (balanceErrors > 0 && balanceErrors * 2 >= lanes.length) {
       report.deletesWithheld = true;
-      report.error = t("CORE.ERROR.BALANCE_EMPTY_DELETES_WITHHELD", { name, count: balanceErrors });
+      report.error = t("CORE.ERROR.BALANCE_EMPTY_DELETES_WITHHELD", {
+        name,
+        count: balanceErrors,
+      });
       consola.warn(report.error);
     }
     consola.info(
